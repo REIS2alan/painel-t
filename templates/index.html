@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel de Chamadas</title>
+<meta http-equiv="refresh" content="8">
+<style>
+body { margin:0; font-family: Arial, sans-serif; background:#1b4d1b; color:white; }
+.titulo-principal { font-size:2em; font-weight:bold; margin:20px; color:#FFCC00; text-align:center; }
+.main-container { display:flex; justify-content:space-between; width:95%; max-width:1900px; margin:0 auto 30px auto; gap:20px; }
+.notificacoes-panel { flex:2; background-color: rgba(0,0,0,0.2); border-radius:8px; padding:10px; overflow-x:auto; }
+.notificacoes-panel table { width:100%; border-collapse:collapse; font-size:1em; }
+.notificacoes-panel th { background-color:orange; padding:8px; }
+.notificacoes-panel td { padding:10px; text-align:center; }
+tr:nth-child(even) { background-color: rgba(0,100,0,0.6); }
+tr:nth-child(odd) { background-color: rgba(0,128,0,0.6); }
+.visto { background-color: rgba(128,128,128,0.6); color:white; }
+.aviso-geral { background-color:#FFD633; color:#004620; font-weight:bold; padding:10px; border-radius:6px; margin-bottom:10px; }
+.maquinas-panel { flex:1; background-color: rgba(0,0,0,0.2); border-radius:8px; padding:10px; }
+.maquinas-grid { display:grid; grid-template-columns:repeat(1,1fr); gap:15px; }
+@media(min-width:800px){ .maquinas-grid { grid-template-columns:repeat(2,1fr); } }
+.maquina-item { font-size:1.1em; background: rgba(255,255,255,0.05); padding:10px; border-radius:6px; display:flex; flex-direction:column; align-items:center; }
+.status-indicator { display:inline-block; width:12px; height:12px; border-radius:50%; margin-left:5px; }
+button { padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-weight:bold; margin:10px; }
+.btn-disponivel { background:#28a745; color:white; }
+.btn-uso { background:#dc3545; color:white; }
+button.ativo { filter: brightness(0.6); }
+.entrada { color:#00FF00; font-weight:bold; }
+.saida { color:#FF0000; font-weight:bold; }
+</style>
+</head>
+<body>
+
+<div class="titulo-principal">Painel de Chamadas {{ deposito }}</div>
+
+<div class="main-container">
+    <!-- Coluna de notificações -->
+    <div class="notificacoes-panel">
+        {% for n in notificacoes %}
+            {% if n.local == "todos" or n.nome == "Aviso Geral" %}
+                {% if deposito not in n.visto_depositos %}
+                    <div class="aviso-geral" id="msg-{{ n.id }}">
+                        {{ n.mensagem or n.setor or "Aviso geral" }} <br>
+                        <small>{{ n.data_criacao }} {{ n.hora_criacao }}</small>
+                        <button onclick="marcarComoVistoNota({{ n.id }}, '{{ deposito }}', this)">✔ Visto</button>
+                    </div>
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Operação</th>
+                    <th>Depósito</th>
+                    <th>Ação / Status</th>
+                    <th>Horários</th>
+                    <th>Chegada</th>
+                    <th>Data</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for n in notificacoes %}
+                    {% if n.local != "todos" and n.nome != "Aviso Geral" %}
+                    <tr class="{% if n.visto %}visto{% endif %}">
+                        <td class="{% if n.nome=='Entrada' %}entrada{% elif n.nome=='Saída' %}saida{% endif %}">
+                            {{ n.nome }}{% if n.setor %} - {{ n.setor }}{% endif %}
+                        </td>
+                        <td>{{ n.local }}</td>
+                        <td>
+                            {% set tipo = n.nome|lower %}
+                            {% if tipo in ['carro','empilhadeira'] %}
+                                <div id="botoes-{{ n.id }}">
+                                    {% if not n.status or n.status == "" %}
+                                        <button onclick="proximoStatus({{ n.id }}, 'aceito', '{{ deposito }}')">Aceitar</button>
+                                    {% elif n.status == "aceito" %}
+                                        <button onclick="proximoStatus({{ n.id }}, 'no_deposito', '{{ deposito }}')">Chegou no depósito</button>
+                                    {% elif n.status == "no_deposito" %}
+                                        <button onclick="proximoStatus({{ n.id }}, 'a_caminho', '{{ deposito }}')">Saiu p/ expedição</button>
+                                    {% elif n.status == "a_caminho" %}
+                                        <button onclick="proximoStatus({{ n.id }}, 'entregue', '{{ deposito }}')">Chegou na expedição</button>
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                {% if n.visto %}
+                                    ✔ Visto
+                                {% else %}
+                                    <button onclick="marcarComoVistoNota({{ n.id }}, '{{ deposito }}', this)">✔ Visto</button>
+
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="status-container" id="status-{{ n.id }}">
+                                {% for key, hora in n.status_horarios.items() %}
+                                    <div class="status-{{ key }}">{{ key.replace('_',' ')|capitalize }} ({{ hora }})</div>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td>{{ n.hora_criacao }}</td>
+                        <td>{{ n.data_criacao }}</td>
+                    </tr>
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Coluna de máquinas -->
+    <div class="maquinas-panel">
+        <h2>Empilhadeiras Disponíveis</h2>
+        <div class="maquinas-grid">
+            {% for m in maquinas %}
+            <div class="maquina-item" id="maquina-{{ loop.index }}">
+                <span>
+                    {{ m.nome }}
+                    <span class="status-indicator" id="status-indicator-{{ loop.index }}"
+                          style="background-color: {% if m.disponivel %}#00FF00{% else %}#FF3300{% endif %};"></span>
+                    <span id="status-text-{{ loop.index }}">
+                        {% if m.disponivel %}Disponível{% else %}Em uso {% if m.setor %} ({{ m.setor }}){% endif %}{% endif %}
+                    </span>
+                </span>
+                <div>
+                    <button class="btn-disponivel {% if m.disponivel %}ativo{% endif %}"
+                            onclick="atualizarEmpilhadeira('{{ m.nome }}', true, {{ loop.index }})">Disponível</button>
+                    <button class="btn-uso {% if not m.disponivel %}ativo{% endif %}"
+                            onclick="definirSetorEmpilhadeira('{{ m.nome }}', {{ loop.index }})">Em uso</button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<audio id="audio-player" preload="auto" loop></audio>
+
+<script>
+// 🔹 Players separados
+const playerNotas = new Audio(); playerNotas.loop = true;
+const playerCarros = new Audio(); playerCarros.loop = true;
+
+// 🔹 Sons de cada depósito
+const audiosDepositos = {
+    "D-06": "/static/sounds/D-06.mp3",
+    "D-9": "/static/sounds/D-9.mp3",
+    "D-13": "/static/sounds/D-13.mp3",
+    "D-14": "/static/sounds/D-14.mp3",
+    "D-18_19": "/static/sounds/D-18_19.mp3",
+    "D-24": "/static/sounds/D-24.mp3",
+    "D-25": "/static/sounds/D-25.mp3",
+    "CLIMATIZADA": "/static/sounds/CLIMATIZADA.mp3",
+    "HASTES": "/static/sounds/HASTES.mp3"
+};
+
+// 🔹 áudio carro/empilhadeira
+const audioCarroEmpilhadeira = "/static/sounds/pedido.mp3";
+
+// 🔹 notificações ativas
+let notificacoesNotasAtivas = new Set();
+let notificacoesCarrosAtivas = new Set();
+
+function tocarAudioNota(id, deposito, nome){
+    if(nome.toLowerCase()==="carro" || nome.toLowerCase()==="empilhadeira") return;
+
+    // 🔹 Normaliza o nome do depósito para bater com as chaves do audiosDepositos
+    let chave = deposito.toUpperCase().replace(/\s+/g, "").replace(/_/g, "-");
+
+    if(!notificacoesNotasAtivas.has(id) && audiosDepositos[chave]){
+        playerNotas.src = audiosDepositos[chave];
+        playerNotas.play().catch(err=>console.log("Erro autoplay nota:", err));
+        notificacoesNotasAtivas.add(id);
+    } else {
+        console.log("Depósito sem áudio configurado:", deposito, "->", chave);
+    }
+}
+
+
+// 🔹 tocar áudio carro/empilhadeira
+function tocarAudioCarroEmpilhadeira(id, nome){
+    if(nome.toLowerCase()!=="carro" && nome.toLowerCase()!=="empilhadeira") return;
+    if(!notificacoesCarrosAtivas.has(id)){
+        playerCarros.src = audioCarroEmpilhadeira;
+        playerCarros.play().catch(err=>console.log("Erro autoplay carro/empilhadeira:", err));
+        notificacoesCarrosAtivas.add(id);
+    }
+}
+
+// 🔹 parar áudio
+function pararAudioNota(id){ playerNotas.pause(); playerNotas.currentTime=0; notificacoesNotasAtivas.delete(id); }
+function pararAudioCarro(id){ playerCarros.pause(); playerCarros.currentTime=0; notificacoesCarrosAtivas.delete(id); }
+
+// 🔹 atualizar status
+function proximoStatus(id,status,deposito){
+    pararAudioNota(id); pararAudioCarro(id);
+    fetch(`/atualizar_status/${id}/${status}/${deposito}`, {method:'POST'})
+        .then(res=>res.json())
+        .then(data=>{
+            if(data.success){
+                const container=document.getElementById(`botoes-${id}`);
+                let novoBotao="";
+                if(status=="aceito") novoBotao=`<button onclick="proximoStatus(${id}, 'no_deposito', '${deposito}')">Chegou no depósito</button>`;
+                else if(status=="no_deposito") novoBotao=`<button onclick="proximoStatus(${id}, 'a_caminho', '${deposito}')">Saiu p/ expedição</button>`;
+                else if(status=="a_caminho") novoBotao=`<button onclick="proximoStatus(${id}, 'entregue', '${deposito}')">Chegou na expedição</button>`;
+                container.innerHTML=novoBotao;
+
+                const statusContainer=document.getElementById(`status-${id}`);
+                const div=document.createElement('div');
+                div.className=`status-${status}`;
+                div.textContent=status.replace('_',' ').charAt(0).toUpperCase()+status.replace('_',' ').slice(1)+` (${data.hora})`;
+                statusContainer.appendChild(div);
+            }
+        });
+}
+
+function marcarComoVistoNota(id, deposito, btn){
+    // para qualquer áudio relacionado à notificação
+    try { pararAudioNota(id); } catch(e){}
+    try { pararAudioCarro(id); } catch(e){}
+
+    const aviso = btn.closest(".aviso-geral");
+    if(aviso){
+        // aviso geral -> rota específica para mensagens
+        fetch(`/marcar_visto_mensagem/${id}/${deposito}`, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success){
+                    aviso.remove(); // some de vez
+                } else {
+                    console.log("marcar_visto_mensagem retornou false:", data);
+                    // fallback: tentar marcar via atualizar_status
+                    fetch(`/atualizar_status/${id}/visto/${deposito}`, { method: 'POST' })
+                      .then(r => r.json()).then(d => {
+                        if(d.success) aviso.remove();
+                      }).catch(err=>console.log("erro fallback atualizar_status:", err));
+                }
+            })
+            .catch(err => console.log("Erro marcar_visto_mensagem:", err));
+    } else {
+        // notificação em tabela -> usar atualizar_status
+        fetch(`/atualizar_status/${id}/visto/${deposito}`, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success){
+                    const row = btn.closest("tr");
+                    if(row) row.classList.add("visto");
+                    // substitui o botão pelo texto ✔ Visto
+                    const span = document.createElement("span");
+                    span.textContent = "✔ Visto";
+                    btn.replaceWith(span);
+                } else {
+                    console.log("atualizar_status retornou false:", data);
+                }
+            })
+            .catch(err => console.log("Erro atualizar_status:", err));
+    }
+}
+
+
+
+
+function atualizarEmpilhadeira(nome, disponivel, index){
+    fetch(`/atualizar_empilhadeira/${nome}/${disponivel}`, { method: 'POST' })
+    .then(res=>res.json())
+    .then(data=>{
+        if(data.success){
+            const statusText = document.getElementById(`status-text-${index}`);
+            const indicator = document.getElementById(`status-indicator-${index}`);
+
+            if(disponivel){
+                indicator.style.backgroundColor = "#00FF00";
+                statusText.textContent = "Disponível";   // limpa o setor antigo
+            } else {
+                indicator.style.backgroundColor = "#FF3300";
+                statusText.textContent = "Em uso" + (data.setor ? ` (${data.setor})` : "");
+            }
+
+            // Atualiza visual dos botões
+            const container = document.getElementById(`maquina-${index}`);
+            container.querySelector(".btn-disponivel").classList.toggle("ativo", disponivel);
+            container.querySelector(".btn-uso").classList.toggle("ativo", !disponivel);
+        }
+    })
+    .catch(err=>console.log("Erro atualizar empilhadeira:", err));
+}
+
+
+function definirSetorEmpilhadeira(nome, index){
+    const setor = prompt("Digite o setor em uso:");
+    if(!setor) return;
+
+    fetch(`/definir_setor_empilhadeira/${nome}/${setor}`, { method:'POST' })
+    .then(res=>res.json())
+    .then(data=>{
+        if(data.success){
+            // Atualiza o painel localmente
+            const statusText = document.getElementById(`status-text-${index}`);
+            statusText.textContent = "Em uso (" + data.setor + ")";  // <-- use o setor retornado pelo servidor
+            document.getElementById(`status-indicator-${index}`).style.backgroundColor = "#FF3300";
+            const container = document.getElementById(`maquina-${index}`);
+            container.querySelector(".btn-disponivel").classList.remove("ativo");
+            container.querySelector(".btn-uso").classList.add("ativo");
+        }
+    })
+    .catch(err=>console.log("Erro definir setor:", err));
+}
+
+
+// 🔹 buscar notificações
+function buscarNotificacoes(){
+    fetch("/notificacoes_ativas/{{ deposito }}")
+        .then(res=>res.json())
+        .then(data=>{
+            data.notificacoes.forEach(n=>{
+                tocarAudioNota(n.id,n.local,n.nome);
+                tocarAudioCarroEmpilhadeira(n.id,n.nome);
+            });
+        }).catch(err=>console.log("Erro ao buscar notificações:", err));
+}
+
+setInterval(buscarNotificacoes,5000);
+
+window.onload=function(){ buscarNotificacoes(); };
+</script>
+
+</body>
+</html>
