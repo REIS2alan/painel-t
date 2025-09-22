@@ -3,10 +3,6 @@ from datetime import datetime
 import os
 import pytz
 
-
-from datetime import datetime
-
-
 # fuso horário de São Paulo (Brasília)
 fuso = pytz.timezone('America/Sao_Paulo')
 
@@ -17,17 +13,17 @@ notificacoes = []
 
 # Lista de máquinas
 maquinas = [
+    {"nome": "EM-08 7,0", "disponivel": True, "local_trabalho": None},
+    {"nome": "EM-11 7,0  24X", "disponivel": True, "local_trabalho": None},
     {"nome": "EEP-01 2,5", "disponivel": True, "local_trabalho": None},
     {"nome": "EEP-02 2,5","disponivel": True, "local_trabalho": None},
     {"nome": "EEC-01 2,5","disponivel": True, "local_trabalho": None},
     {"nome": "EEC-02 2,5","disponivel": True, "local_trabalho": None},
+    {"nome": "EM-10 7,0", "disponivel": True, "local_trabalho": None},
+    {"nome": "EEC-12 7,0 24X", "disponivel": True, "local_trabalho": None},
     {"nome": "EEC-04 2,5","disponivel": True, "local_trabalho": None},
     {"nome": "EEC-07 2,5", "disponivel": True, "local_trabalho": None},
     {"nome": "EEC-08 2,5", "disponivel": True, "local_trabalho": None},
-    {"nome": "EM-08 7,0", "disponivel": True, "local_trabalho": None},
-    {"nome": "EM-10 7,0", "disponivel": True, "local_trabalho": None},
-    {"nome": "EEC-12 7,0 24X", "disponivel": True, "local_trabalho": None},
-    {"nome": "EM-11 7,0  24X", "disponivel": True, "local_trabalho": None},
     {"nome": "PC01 7,O", "disponivel": True, "local_trabalho": None},
 ]
 
@@ -53,11 +49,9 @@ def definir_setor_empilhadeira(nome, setor):
 def painel(deposito):
     todas = []
     for n in notificacoes:
-        # garante chave deposito_aceitou presente (None se não houver)
         if "deposito_aceitou" not in n:
             n["deposito_aceitou"] = None
 
-        # inclui notificações relevantes (como antes)
         if n["nome"].lower() in ["carro", "empilhadeira"]:
             todas.append(n)
         elif n["local"] == deposito:
@@ -65,7 +59,6 @@ def painel(deposito):
         elif n["local"] == "todos":
             todas.append(n)
 
-        # monta botoes_desabilitados como antes (usado no template se desejar)
         n["botoes_desabilitados"] = list(n.get("status_horarios", {}).keys())
         if n.get("visto"):
             n["botoes_desabilitados"].append("visto")
@@ -105,7 +98,6 @@ def nova_notificacao():
         "hora_criacao": agora.strftime("%H:%M:%S"),
         "hora_visto": None,
         "status_horarios": {},
-        # novo campo: depósito que aceitou essa solicitação (None se ninguém aceitou)
         "deposito_aceitou": None
     })
     return jsonify({"success": True})
@@ -116,41 +108,32 @@ def atualizar_status(id, status, deposito):
     global notificacoes
     for n in notificacoes:
         if n["id"] == id:
-            hora = datetime.now().strftime("%H:%M:%S")
+            hora = datetime.now(fuso).strftime("%H:%M:%S")
 
-            # Caso: marcar como visto (pode ser feito por qualquer depósito)
             if status == "visto":
                 n["visto"] = True
                 n["hora_visto"] = hora
                 return jsonify(success=True, hora=hora)
 
-            # Caso: alguém quer "aceitar" (apenas 1 depósito pode aceitar)
             if status == "aceito":
-                # se já foi aceito por outro depósito, recusa a aceitação
                 if n.get("deposito_aceitou") and n["deposito_aceitou"] != deposito:
                     return jsonify(success=False, error="Já aceito por outro depósito", hora=hora)
-                # se não foi aceito, grava qual depósito aceitou
                 n["deposito_aceitou"] = deposito
                 n["status_horarios"][status] = hora
                 n["status"] = status
                 n["visto"] = True
                 return jsonify(success=True, hora=hora)
 
-            # Para outros status de fluxo (no_deposito, a_caminho, entregue) — só o depósito que aceitou pode atualizar
             if status in ["no_deposito", "a_caminho", "entregue"]:
-                # se ninguém aceitou ainda, recusa
                 if not n.get("deposito_aceitou"):
                     return jsonify(success=False, error="Nenhum depósito aceitou esta solicitação", hora=hora)
-                # se depósito que tenta atualizar não for o que aceitou, recusa
                 if n["deposito_aceitou"] != deposito:
                     return jsonify(success=False, error="Somente o depósito que aceitou pode atualizar o status", hora=hora)
 
-                # permite atualização
                 n["status_horarios"][status] = hora
                 n["status"] = status
                 return jsonify(success=True, hora=hora)
 
-            # Qualquer outro status não tratado — grava normalmente
             n["status_horarios"][status] = hora
             n["status"] = status
             return jsonify(success=True, hora=hora)
@@ -187,9 +170,7 @@ def marcar_visto_mensagem(id, deposito):
 def notificacoes_ativas(deposito):
     todas = []
     for n in notificacoes:
-        # Inclui apenas notificações não vistas
         if not n.get("visto", False):
-            # inclui carros/empilhadeiras mesmo assim (template deve mostrar botão desabilitado se já aceito por outro depósito)
             if n["nome"].lower() in ["carro", "empilhadeira"]:
                 todas.append(n)
             elif n["local"] == deposito or n["local"] == "todos":
@@ -204,7 +185,7 @@ def atualizar_empilhadeira(nome, disponivel):
         if m["nome"] == nome:
             m["disponivel"] = disponivel
             if disponivel:
-                m["setor"] = ""  # limpa o setor quando volta a estar disponível
+                m["setor"] = ""
             return jsonify(success=True, setor=m.get("setor", ""))
     return jsonify(success=False)
 
