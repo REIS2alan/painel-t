@@ -1,6 +1,14 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 from datetime import datetime
 import os
+import pytz
+
+
+from datetime import datetime
+
+
+# fuso horário de São Paulo (Brasília)
+fuso = pytz.timezone('America/Sao_Paulo')
 
 app = Flask(__name__)
 
@@ -9,20 +17,18 @@ notificacoes = []
 
 # Lista de máquinas
 maquinas = [
-    {"nome": "EM-07", "disponivel": True, "local_trabalho": None},
-    {"nome": "EEC-07", "disponivel": True, "local_trabalho": None},
-    {"nome": "Empilhadeira - 01", "disponivel": True, "local_trabalho": None},
-    {"nome": "Empilhadeira - 02", "disponivel": True, "local_trabalho": None},
-    {"nome": "Empilhadeira - 03", "disponivel": True, "local_trabalho": None},
-    {"nome": "Empilhadeira - 04", "disponivel": True, "local_trabalho": None},
-    {"nome": "Empilhadeira - 05", "disponivel": True, "local_trabalho": None},
-    {"nome": "Empilhadeira - 06", "disponivel": True, "local_trabalho": None},
-    {"nome": "Empilhadeira - 07", "disponivel": True, "local_trabalho": None},
-    {"nome": "Empilhadeira - 08", "disponivel": True, "local_trabalho": None},
-    {"nome": "Empilhadeira - 09", "disponivel": True, "local_trabalho": None},
-    {"nome": "Empilhadeira - 10", "disponivel": True, "local_trabalho": None},
-    {"nome": "Empilhadeira - 11", "disponivel": True, "local_trabalho": None},
-    {"nome": "Empilhadeira - 12", "disponivel": True, "local_trabalho": None},
+    {"nome": "EEP-01 2,5", "disponivel": True, "local_trabalho": None},
+    {"nome": "EEP-02 2,5","disponivel": True, "local_trabalho": None},
+    {"nome": "EEC-01 2,5","disponivel": True, "local_trabalho": None},
+    {"nome": "EEC-02 2,5","disponivel": True, "local_trabalho": None},
+    {"nome": "EEC-04 2,5","disponivel": True, "local_trabalho": None},
+    {"nome": "EEC-07 2,5", "disponivel": True, "local_trabalho": None},
+    {"nome": "EEC-08 2,5", "disponivel": True, "local_trabalho": None},
+    {"nome": "EM-08 7,0", "disponivel": True, "local_trabalho": None},
+    {"nome": "EM-10 7,0", "disponivel": True, "local_trabalho": None},
+    {"nome": "EEC-12 7,0 24X", "disponivel": True, "local_trabalho": None},
+    {"nome": "EM-11 7,0  24X", "disponivel": True, "local_trabalho": None},
+    {"nome": "PC01 7,O", "disponivel": True, "local_trabalho": None},
 ]
 
 @app.route("/", methods=["GET", "POST"])
@@ -47,6 +53,11 @@ def definir_setor_empilhadeira(nome, setor):
 def painel(deposito):
     todas = []
     for n in notificacoes:
+        # garante chave deposito_aceitou presente (None se não houver)
+        if "deposito_aceitou" not in n:
+            n["deposito_aceitou"] = None
+
+        # inclui notificações relevantes (como antes)
         if n["nome"].lower() in ["carro", "empilhadeira"]:
             todas.append(n)
         elif n["local"] == deposito:
@@ -54,6 +65,7 @@ def painel(deposito):
         elif n["local"] == "todos":
             todas.append(n)
 
+        # monta botoes_desabilitados como antes (usado no template se desejar)
         n["botoes_desabilitados"] = list(n.get("status_horarios", {}).keys())
         if n.get("visto"):
             n["botoes_desabilitados"].append("visto")
@@ -61,9 +73,11 @@ def painel(deposito):
     todas_ordenadas = sorted(todas, key=lambda x: x["id"], reverse=True)
     return render_template("index.html", notificacoes=todas_ordenadas, deposito=deposito, maquinas=maquinas)
 
+
 @app.route("/escritorio")
 def escritorio():
     return render_template("escritorio.html")
+
 
 @app.route("/nova", methods=["POST"])
 def nova_notificacao():
@@ -76,7 +90,8 @@ def nova_notificacao():
     if not nome and not mensagem:
         return jsonify({"success": False, "error": "Faltando dados"}), 400
 
-    agora = datetime.now()
+    agora = datetime.now(fuso)
+
     notificacoes.append({
         "id": len(notificacoes) + 1,
         "nome": nome if nome else "Aviso Geral",
@@ -89,9 +104,12 @@ def nova_notificacao():
         "data_criacao": agora.strftime("%d/%m/%Y"),
         "hora_criacao": agora.strftime("%H:%M:%S"),
         "hora_visto": None,
-        "status_horarios": {}
+        "status_horarios": {},
+        # novo campo: depósito que aceitou essa solicitação (None se ninguém aceitou)
+        "deposito_aceitou": None
     })
     return jsonify({"success": True})
+
 
 @app.route("/atualizar_status/<int:id>/<status>/<deposito>", methods=["POST"])
 def atualizar_status(id, status, deposito):
@@ -99,16 +117,46 @@ def atualizar_status(id, status, deposito):
     for n in notificacoes:
         if n["id"] == id:
             hora = datetime.now().strftime("%H:%M:%S")
+
+            # Caso: marcar como visto (pode ser feito por qualquer depósito)
             if status == "visto":
                 n["visto"] = True
                 n["hora_visto"] = hora
-            else:
+                return jsonify(success=True, hora=hora)
+
+            # Caso: alguém quer "aceitar" (apenas 1 depósito pode aceitar)
+            if status == "aceito":
+                # se já foi aceito por outro depósito, recusa a aceitação
+                if n.get("deposito_aceitou") and n["deposito_aceitou"] != deposito:
+                    return jsonify(success=False, error="Já aceito por outro depósito", hora=hora)
+                # se não foi aceito, grava qual depósito aceitou
+                n["deposito_aceitou"] = deposito
                 n["status_horarios"][status] = hora
                 n["status"] = status
-                if status == "aceito":
-                    n["visto"] = True
+                n["visto"] = True
+                return jsonify(success=True, hora=hora)
+
+            # Para outros status de fluxo (no_deposito, a_caminho, entregue) — só o depósito que aceitou pode atualizar
+            if status in ["no_deposito", "a_caminho", "entregue"]:
+                # se ninguém aceitou ainda, recusa
+                if not n.get("deposito_aceitou"):
+                    return jsonify(success=False, error="Nenhum depósito aceitou esta solicitação", hora=hora)
+                # se depósito que tenta atualizar não for o que aceitou, recusa
+                if n["deposito_aceitou"] != deposito:
+                    return jsonify(success=False, error="Somente o depósito que aceitou pode atualizar o status", hora=hora)
+
+                # permite atualização
+                n["status_horarios"][status] = hora
+                n["status"] = status
+                return jsonify(success=True, hora=hora)
+
+            # Qualquer outro status não tratado — grava normalmente
+            n["status_horarios"][status] = hora
+            n["status"] = status
             return jsonify(success=True, hora=hora)
+
     return jsonify(success=False)
+
 
 @app.route("/atualizar_maquina", methods=["POST"])
 def atualizar_maquina():
@@ -124,6 +172,7 @@ def atualizar_maquina():
             break
     return jsonify(success=True)
 
+
 @app.route("/marcar_visto_mensagem/<int:id>/<deposito>", methods=["POST"])
 def marcar_visto_mensagem(id, deposito):
     for n in notificacoes:
@@ -133,17 +182,20 @@ def marcar_visto_mensagem(id, deposito):
             return jsonify(success=True)
     return jsonify(success=False)
 
+
 @app.route("/notificacoes_ativas/<deposito>")
 def notificacoes_ativas(deposito):
     todas = []
     for n in notificacoes:
         # Inclui apenas notificações não vistas
         if not n.get("visto", False):
+            # inclui carros/empilhadeiras mesmo assim (template deve mostrar botão desabilitado se já aceito por outro depósito)
             if n["nome"].lower() in ["carro", "empilhadeira"]:
                 todas.append(n)
             elif n["local"] == deposito or n["local"] == "todos":
                 todas.append(n)
     return jsonify({"notificacoes": todas})
+
 
 @app.route('/atualizar_empilhadeira/<nome>/<disponivel>', methods=['POST'])
 def atualizar_empilhadeira(nome, disponivel):
@@ -155,11 +207,6 @@ def atualizar_empilhadeira(nome, disponivel):
                 m["setor"] = ""  # limpa o setor quando volta a estar disponível
             return jsonify(success=True, setor=m.get("setor", ""))
     return jsonify(success=False)
-
-
-
-
-
 
 
 if __name__ == "__main__":

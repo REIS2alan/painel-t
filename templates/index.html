@@ -6,28 +6,152 @@
 <title>Painel de Chamadas</title>
 <meta http-equiv="refresh" content="8">
 <style>
-body { margin:0; font-family: Arial, sans-serif; background:#1b4d1b; color:white; }
-.titulo-principal { font-size:2em; font-weight:bold; margin:20px; color:#FFCC00; text-align:center; }
-.main-container { display:flex; justify-content:space-between; width:95%; max-width:1900px; margin:0 auto 30px auto; gap:20px; }
-.notificacoes-panel { flex:2; background-color: rgba(0,0,0,0.2); border-radius:8px; padding:10px; overflow-x:auto; }
-.notificacoes-panel table { width:100%; border-collapse:collapse; font-size:1em; }
-.notificacoes-panel th { background-color:orange; padding:8px; }
-.notificacoes-panel td { padding:10px; text-align:center; }
-tr:nth-child(even) { background-color: rgba(0,100,0,0.6); }
-tr:nth-child(odd) { background-color: rgba(0,128,0,0.6); }
-.visto { background-color: rgba(128,128,128,0.6); color:white; }
-.aviso-geral { background-color:#FFD633; color:#004620; font-weight:bold; padding:10px; border-radius:6px; margin-bottom:10px; }
-.maquinas-panel { flex:1; background-color: rgba(0,0,0,0.2); border-radius:8px; padding:10px; }
-.maquinas-grid { display:grid; grid-template-columns:repeat(1,1fr); gap:15px; }
-@media(min-width:800px){ .maquinas-grid { grid-template-columns:repeat(2,1fr); } }
-.maquina-item { font-size:1.1em; background: rgba(255,255,255,0.05); padding:10px; border-radius:6px; display:flex; flex-direction:column; align-items:center; }
-.status-indicator { display:inline-block; width:12px; height:12px; border-radius:50%; margin-left:5px; }
-button { padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-weight:bold; margin:10px; }
-.btn-disponivel { background:#28a745; color:white; }
-.btn-uso { background:#dc3545; color:white; }
-button.ativo { filter: brightness(0.6); }
-.entrada { color:#00FF00; font-weight:bold; }
+body { margin:0;
+ font-family: Arial, sans-serif;
+background:#1b4d1b;
+color:white;
+
+.titulo-principal {
+font-size: 2em;
+font-weight: bold;
+margin: 20px;
+color: #FFCC00;
+text-align: left;   /* alinha à esquerda */
+margin-left: 400px;  /* regula o quanto vai para a esquerda */
+padding:12px;
+}
+
+
+.main-container
+ { display:flex;
+justify-content:space-between;
+width:95%; max-width:1900px;
+margin:0 auto 30px auto;
+gap:20px;
+
+ }
+
+.notificacoes-panel
+ { flex:2;
+background-color: rgba(0,0,0,0.2);
+border-radius:8px
+; padding:10px;
+overflow-x:auto;
+
+}
+
+.notificacoes-panel table
+{ width:100%;
+border-collapse:collapse;
+font-size:1em;
+
+}
+
+.notificacoes-panel th
+{ background-color:orange;
+padding:8px;
+
+}
+
+.notificacoes-panel td
+{ padding:10px;
+text-align:center;
+
+}
+
+tr:nth-child(even)
+{ background-color: rgba(0,100,0,0.6);
+
+}
+tr:nth-child(odd)
+{ background-color: rgba(0,128,0,0.6);
+
+ }
+
+.visto
+ { background-color: rgba(128,128,128,0.6);
+  color:white;
+
+  }
+.aviso-geral
+{ background-color:#FFD633;
+color:#004620;
+font-weight:bold;
+padding:10px;
+border-radius:6px;
+margin-bottom:10px;
+}
+
+.maquinas-panel
+{ flex:1;
+background-color: rgba(0,0,0,0.2);
+border-radius:8px; padding:10px;
+
+}
+
+.maquinas-grid
+{ display:grid;
+grid-template-columns:repeat(1,1fr);
+gap:15px;
+
+}
+
+@media(min-width:800px){
+
+.maquinas-grid
+ { grid-template-columns:repeat(2,1fr);
+  } }
+.maquina-item
+{ font-size:1.1em;
+background: rgba(255,255,255,0.05);
+padding:10px;
+border-radius:6px;
+display:flex;
+flex-direction:column;
+align-items:center;
+
+}
+
+.status-indicator
+{ display:inline-block;
+width:12px;
+height:12px;
+border-radius:50%;
+margin-left:5px;
+
+}
+
+
+button
+{ padding:6px 12px;
+border:none; border-radius:6px;
+cursor:pointer;
+font-weight:bold;
+margin:10px;
+
+}
+.btn-disponivel
+{ background:#28a745;
+color:white;
+}
+
+.btn-uso
+{ background:#dc3545;
+color:white;
+}
+
+button.ativo
+{ filter: brightness(0.6);
+
+}
+
+.entrada
+{ color:#00FF00;
+font-weight:bold;
+}
+
 .saida { color:#FF0000; font-weight:bold; }
+
 </style>
 </head>
 <body>
@@ -69,28 +193,48 @@ button.ativo { filter: brightness(0.6); }
                         </td>
                         <td>{{ n.local }}</td>
                         <td>
-                            {% set tipo = n.nome|lower %}
-                            {% if tipo in ['carro','empilhadeira'] %}
-                                <div id="botoes-{{ n.id }}">
-                                    {% if not n.status or n.status == "" %}
-                                        <button onclick="proximoStatus({{ n.id }}, 'aceito', '{{ deposito }}')">Aceitar</button>
-                                    {% elif n.status == "aceito" %}
-                                        <button onclick="proximoStatus({{ n.id }}, 'no_deposito', '{{ deposito }}')">Chegou no depósito</button>
-                                    {% elif n.status == "no_deposito" %}
-                                        <button onclick="proximoStatus({{ n.id }}, 'a_caminho', '{{ deposito }}')">Saiu p/ expedição</button>
-                                    {% elif n.status == "a_caminho" %}
-                                        <button onclick="proximoStatus({{ n.id }}, 'entregue', '{{ deposito }}')">Chegou na expedição</button>
-                                    {% endif %}
-                                </div>
-                            {% else %}
-                                {% if n.visto %}
-                                    ✔ Visto
-                                {% else %}
-                                    <button onclick="marcarComoVistoNota({{ n.id }}, '{{ deposito }}', this)">✔ Visto</button>
+    {% set tipo = n.nome|lower %}
+    {% if tipo in ['carro','empilhadeira'] %}
+        <div id="botoes-{{ n.id }}">
+            {% if not n.status or n.status == "" %}
+                {% if n.deposito_aceitou and n.deposito_aceitou != deposito %}
+                    <span style="color: orange; font-weight: bold;">
+                        Aceito por {{ n.deposito_aceitou }}
+                    </span>
+                {% else %}
+                    <button onclick="proximoStatus({{ n.id }}, 'aceito', '{{ deposito }}')">
+                        Aceitar
+                    </button>
+                {% endif %}
+            {% elif n.status == "aceito" and n.deposito_aceitou == deposito %}
+                <button onclick="proximoStatus({{ n.id }}, 'no_deposito', '{{ deposito }}')">
+                    Chegou no depósito
+                </button>
+            {% elif n.status == "no_deposito" and n.deposito_aceitou == deposito %}
+                <button onclick="proximoStatus({{ n.id }}, 'a_caminho', '{{ deposito }}')">
+                    Saiu p/ expedição
+                </button>
+            {% elif n.status == "a_caminho" and n.deposito_aceitou == deposito %}
+                <button onclick="proximoStatus({{ n.id }}, 'entregue', '{{ deposito }}')">
+                    Chegou na expedição
+                </button>
+            {% elif n.deposito_aceitou and n.deposito_aceitou != deposito %}
+                <span style="color: orange; font-weight: bold;">
+                    Aceito por {{ n.deposito_aceitou }}
+                </span>
+            {% endif %}
+        </div>
+    {% else %}
+        {% if n.visto %}
+            ✔ Visto
+        {% else %}
+            <button onclick="marcarComoVistoNota({{ n.id }}, '{{ deposito }}', this)">
+                ✔ Visto
+            </button>
+        {% endif %}
+    {% endif %}
+</td>
 
-                                {% endif %}
-                            {% endif %}
-                        </td>
                         <td>
                             <div class="status-container" id="status-{{ n.id }}">
                                 {% for key, hora in n.status_horarios.items() %}
@@ -133,7 +277,7 @@ button.ativo { filter: brightness(0.6); }
     </div>
 </div>
 
-<audio id="audio-player" preload="auto" loop></audio>
+
 
 <script>
 // 🔹 Players separados
@@ -151,29 +295,44 @@ const audiosDepositos = {
     "D-25": "/static/sounds/D-25.mp3",
     "CLIMATIZADA": "/static/sounds/CLIMATIZADA.mp3",
     "HASTES": "/static/sounds/HASTES.mp3"
+
 };
 
 // 🔹 áudio carro/empilhadeira
 const audioCarroEmpilhadeira = "/static/sounds/pedido.mp3";
+const audioNotaGlobal = "/static/sounds/nota.mp3";
+
 
 // 🔹 notificações ativas
 let notificacoesNotasAtivas = new Set();
 let notificacoesCarrosAtivas = new Set();
 
 function tocarAudioNota(id, deposito, nome){
-    if(nome.toLowerCase()==="carro" || nome.toLowerCase()==="empilhadeira") return;
+    // Ignorar carro, empilhadeira e avisos gerais
+    if(
+        nome.toLowerCase() === "carro" ||
+        nome.toLowerCase() === "empilhadeira" ||
+        nome.toLowerCase() === "aviso"
+    ) return;
 
-    // 🔹 Normaliza o nome do depósito para bater com as chaves do audiosDepositos
-    let chave = deposito.toUpperCase().replace(/\s+/g, "").replace(/_/g, "-");
+    // Normaliza só espaços
+    let chave = deposito.toUpperCase().replace(/\s+/g, "");
 
-    if(!notificacoesNotasAtivas.has(id) && audiosDepositos[chave]){
-        playerNotas.src = audiosDepositos[chave];
+    if(!notificacoesNotasAtivas.has(id)){
+        if(audiosDepositos[chave]){
+            // toca áudio específico do depósito
+            playerNotas.src = audiosDepositos[chave];
+        } else {
+            // se não tiver áudio específico, usa o nota.mp3
+            playerNotas.src = audioNotaGlobal;
+        }
         playerNotas.play().catch(err=>console.log("Erro autoplay nota:", err));
         notificacoesNotasAtivas.add(id);
-    } else {
-        console.log("Depósito sem áudio configurado:", deposito, "->", chave);
     }
 }
+
+
+
 
 
 // 🔹 tocar áudio carro/empilhadeira
@@ -312,8 +471,17 @@ function buscarNotificacoes(){
         .then(res=>res.json())
         .then(data=>{
             data.notificacoes.forEach(n=>{
-                tocarAudioNota(n.id,n.local,n.nome);
-                tocarAudioCarroEmpilhadeira(n.id,n.nome);
+                const nomeLower = n.nome.toLowerCase();
+
+                // Só toca áudio de notas
+                if(nomeLower !== "aviso" && nomeLower !== "aviso geral"){
+                    tocarAudioNota(n.id,n.local,n.nome);
+                }
+
+                // Só toca áudio de carro/empilhadeira
+                if(nomeLower === "carro" || nomeLower === "empilhadeira"){
+                    tocarAudioCarroEmpilhadeira(n.id,n.nome);
+                }
             });
         }).catch(err=>console.log("Erro ao buscar notificações:", err));
 }
