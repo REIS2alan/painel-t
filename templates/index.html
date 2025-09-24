@@ -6,6 +6,7 @@
 <title>Painel de Chamadas</title>
 <meta http-equiv="refresh" content="8">
 <style>
+
 body { margin:0;
  font-family: Arial, sans-serif;
 background:#1b4d1b;
@@ -234,19 +235,24 @@ font-weight:bold;
         {% endif %}
     {% endif %}
 </td>
+<td>
+    <div class="status-container" id="status-{{ n.id }}">
+        {% for key, hora in n.status_horarios.items() %}
+            <div class="status-{{ key }}">
+                {{ key.replace('_',' ')|capitalize }} ({{ hora }})
+            </div>
+        {% endfor %}
+        {% if n.hora_visto %}
+            <div class="status-visto">Visto ({{ n.hora_visto }})</div>
+        {% endif %}
+    </div>
+</td>
+<td>{{ n.hora_criacao }}</td>
+<td>{{ n.data_criacao }}</td>
+</tr>
+{% endif %}
+{% endfor %}
 
-                        <td>
-                            <div class="status-container" id="status-{{ n.id }}">
-                                {% for key, hora in n.status_horarios.items() %}
-                                    <div class="status-{{ key }}">{{ key.replace('_',' ')|capitalize }} ({{ hora }})</div>
-                                {% endfor %}
-                            </div>
-                        </td>
-                        <td>{{ n.hora_criacao }}</td>
-                        <td>{{ n.data_criacao }}</td>
-                    </tr>
-                    {% endif %}
-                {% endfor %}
             </tbody>
         </table>
     </div>
@@ -373,13 +379,14 @@ function proximoStatus(id,status,deposito){
 }
 
 function marcarComoVistoNota(id, deposito, btn){
-    // para qualquer áudio relacionado à notificação
-    try { pararAudioNota(id); } catch(e){}
-    try { pararAudioCarro(id); } catch(e){}
+    // Para qualquer áudio relacionado à notificação
+    pararAudioNota(id);
+    pararAudioCarro(id);
+    pararAudioAviso(id);
 
     const aviso = btn.closest(".aviso-geral");
     if(aviso){
-        // aviso geral -> rota específica para mensagens
+        // Aviso geral -> rota específica para mensagens
         fetch(`/marcar_visto_mensagem/${id}/${deposito}`, { method: 'POST' })
             .then(res => res.json())
             .then(data => {
@@ -396,23 +403,54 @@ function marcarComoVistoNota(id, deposito, btn){
             })
             .catch(err => console.log("Erro marcar_visto_mensagem:", err));
     } else {
-        // notificação em tabela -> usar atualizar_status
+        // Notificação em tabela -> usar atualizar_status
         fetch(`/atualizar_status/${id}/visto/${deposito}`, { method: 'POST' })
             .then(res => res.json())
             .then(data => {
                 if(data.success){
                     const row = btn.closest("tr");
                     if(row) row.classList.add("visto");
+
                     // substitui o botão pelo texto ✔ Visto
                     const span = document.createElement("span");
                     span.textContent = "✔ Visto";
                     btn.replaceWith(span);
+
+                    // adiciona o horário na coluna de status
+                    const statusContainer = document.getElementById(`status-${id}`);
+                    if(statusContainer){
+                        const divHora = document.createElement("div");
+                        divHora.className = "status-visto";
+                        divHora.textContent = `Visto (${data.hora})`; // usa a hora retornada pelo servidor
+                        statusContainer.appendChild(divHora);
+                    }
                 } else {
                     console.log("atualizar_status retornou false:", data);
                 }
             })
             .catch(err => console.log("Erro atualizar_status:", err));
     }
+}
+
+
+const playerAviso = new Audio();
+playerAviso.loop = true;
+const audioAvisoGlobal = "/static/sounds/aviso.mp3";
+
+let avisosAtivos = new Set();
+
+function tocarAudioAviso(id){
+    if(!avisosAtivos.has(id)){
+        playerAviso.src = audioAvisoGlobal;
+        playerAviso.play().catch(err => console.log("Erro autoplay aviso:", err));
+        avisosAtivos.add(id);
+    }
+}
+
+function pararAudioAviso(id){
+    playerAviso.pause();
+    playerAviso.currentTime = 0;
+    avisosAtivos.delete(id);
 }
 
 
@@ -465,25 +503,31 @@ function definirSetorEmpilhadeira(nome, index){
 }
 
 
-// 🔹 buscar notificações
 function buscarNotificacoes(){
     fetch("/notificacoes_ativas/{{ deposito }}")
-        .then(res=>res.json())
-        .then(data=>{
-            data.notificacoes.forEach(n=>{
+        .then(res => res.json())
+        .then(data => {
+            data.notificacoes.forEach(n => {
                 const nomeLower = n.nome.toLowerCase();
 
-                // Só toca áudio de notas
-                if(nomeLower !== "aviso" && nomeLower !== "aviso geral"){
-                    tocarAudioNota(n.id,n.local,n.nome);
+                // 🔹 Avisos gerais só se este depósito ainda não viu
+                if((nomeLower === "aviso geral" || nomeLower === "aviso") &&
+                   (!n.visto_depositos || !n.visto_depositos.includes("{{ deposito }}"))) {
+                    tocarAudioAviso(n.id);
                 }
 
-                // Só toca áudio de carro/empilhadeira
+                // 🔹 Notas (não avisos) só se ainda não foram vistas
+                else if(nomeLower !== "aviso" && nomeLower !== "aviso geral" && !n.visto){
+                    tocarAudioNota(n.id, n.local, n.nome);
+                }
+
+                // 🔹 Carros/empilhadeiras
                 if(nomeLower === "carro" || nomeLower === "empilhadeira"){
-                    tocarAudioCarroEmpilhadeira(n.id,n.nome);
+                    tocarAudioCarroEmpilhadeira(n.id, n.nome);
                 }
             });
-        }).catch(err=>console.log("Erro ao buscar notificações:", err));
+        })
+        .catch(err => console.log("Erro ao buscar notificações:", err));
 }
 
 setInterval(buscarNotificacoes,5000);

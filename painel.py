@@ -14,18 +14,19 @@ notificacoes = []
 # Lista de máquinas
 maquinas = [
     {"nome": "EM-08 7,0", "disponivel": True, "local_trabalho": None},
-    {"nome": "EM-11 7,0  24X", "disponivel": True, "local_trabalho": None},
+    {"nome": "EM-11 7,0  24hrs", "disponivel": True, "local_trabalho": None},
     {"nome": "EEP-01 2,5", "disponivel": True, "local_trabalho": None},
-    {"nome": "EEP-02 2,5","disponivel": True, "local_trabalho": None},
-    {"nome": "EEC-01 2,5","disponivel": True, "local_trabalho": None},
-    {"nome": "EEC-02 2,5","disponivel": True, "local_trabalho": None},
+    {"nome": "EEP-02 2,5", "disponivel": True, "local_trabalho": None},
+    {"nome": "EEC-01 2,5", "disponivel": True, "local_trabalho": None},
+    {"nome": "EEC-02 2,5", "disponivel": True, "local_trabalho": None},
     {"nome": "EM-10 7,0", "disponivel": True, "local_trabalho": None},
-    {"nome": "EEC-12 7,0 24X", "disponivel": True, "local_trabalho": None},
-    {"nome": "EEC-04 2,5","disponivel": True, "local_trabalho": None},
+    {"nome": "EEC-12 7,0 24hrs", "disponivel": True, "local_trabalho": None},
+    {"nome": "EEC-04 2,5", "disponivel": True, "local_trabalho": None},
     {"nome": "EEC-07 2,5", "disponivel": True, "local_trabalho": None},
     {"nome": "EEC-08 2,5", "disponivel": True, "local_trabalho": None},
     {"nome": "PC01 7,O", "disponivel": True, "local_trabalho": None},
 ]
+
 
 @app.route("/", methods=["GET", "POST"])
 def escolher():
@@ -128,7 +129,8 @@ def atualizar_status(id, status, deposito):
                 if not n.get("deposito_aceitou"):
                     return jsonify(success=False, error="Nenhum depósito aceitou esta solicitação", hora=hora)
                 if n["deposito_aceitou"] != deposito:
-                    return jsonify(success=False, error="Somente o depósito que aceitou pode atualizar o status", hora=hora)
+                    return jsonify(success=False, error="Somente o depósito que aceitou pode atualizar o status",
+                                   hora=hora)
 
                 n["status_horarios"][status] = hora
                 n["status"] = status
@@ -193,3 +195,4 @@ def atualizar_empilhadeira(nome, disponivel):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=True, host="0.0.0.0", port=port)
+22
