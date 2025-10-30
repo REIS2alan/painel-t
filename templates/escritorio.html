@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lançar Nota</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background-color: #1b4d1b;
+    color: #FFCC00;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+}
+
+.export-link {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+.export-link a {
+    font-size: 12px;
+    text-decoration: none;
+    color: #FFCC00; /* cor azul padrão de link */
+    cursor: pointer;
+}
+
+.export-link a:hover {
+    text-decoration: underline;
+}
+
+.container {
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 30px 40px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+    width: 340px;
+}
+
+h1 {
+    margin-bottom: 25px;
+    font-size: 2em;
+    color: #FFCC00;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 1.1em;
+    text-align: left;
+}
+
+select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border-radius: 6px;
+    border: none;
+    font-size: 1em;
+}
+
+.buttons {
+    display: flex;
+    justify-content: center;
+    margin-top: 15px;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+button {
+    padding: 12px 20px;
+    font-size: 1.1em;
+    background-color: #FFCC00;
+    color: #004620;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.3s;
+}
+
+button:hover {
+    background-color: #FFD633;
+}
+
+#msg {
+    margin-top: 15px;
+    font-weight: bold;
+    color: lightgreen;
+    display: none;
+}
+
+#btnVoltar {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    color: #FFCC00;
+    cursor: pointer;
+    margin-bottom: 15px;
+}
+
+    #formAviso {
+    display: none;
+    text-align: center;
+}
+
+#formAviso h2 {
+    margin-bottom: 15px;
+    color: #FFCC00;
+}
+
+#formAviso textarea {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    resize: none;
+    font-size: 1em;
+    box-sizing: border-box;
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #004620;
+    margin-bottom: 15px;
+}
+
+
+
+</style>
+</head>
+<body>
+
+
+
+
+
+<div class="container">
+    <h1>Lançar Nota</h1>
+
+    <!-- Botão de Voltar -->
+    <button id="btnVoltar" onclick="voltarTelaNormal()">⬅ Voltar</button>
+
+    <!-- Parte normal -->
+    <div id="formNormal">
+        <form id="notaForm" onsubmit="enviarChamado(event)">
+            <label for="deposito">Depósito:</label>
+            <select id="deposito" required>
+                <option value="" disabled selected>Selecione o depósito</option>
+                <option value="D-06">D-06</option>
+                <option value="D-09">D-09</option>
+                <option value="D-14">D-14</option>
+                <option value="D-13 Lado A">D-13 Lado A</option>
+                <option value="D-13 Lado B">D-13 Lado B</option>
+                <option value="CLIMATIZADA">CLIMATIZADA</option>
+                <option value="D-18_19">D-18_19</option>
+                <option value="D-24">D-24</option>
+                <option value="D-25">D-25</option>
+                <option value="HASTES">HASTES</option>
+                <option value="SUCATA">SUCATA</option>
+                <option value="CARPINTARIA">CARPINTARIA</option>
+                <option value="todos">Todos</option>
+            </select>
+
+            <label for="setorEntrada">Nota de Entrada:</label>
+            <select id="setorEntrada">
+                <option value="" disabled selected>Selecione o Setor de Entrada</option>
+                <option value="Carro Correio">Carro Correio</option>
+                <option value="IPERF">IPERF</option>
+                <option value="PTM">PTM</option>
+                <option value="RECEBIMENTO">RECEBIMENTO</option>
+                <option value="MPT">MPT</option>
+            </select>
+
+            <label for="setorSaida">Nota de Saída:</label>
+            <select id="setorSaida">
+                <option value="" disabled selected>Selecione o Setor de Saída</option>
+                <option value="Carro Correio">Carro Correio</option>
+                <option value="IPERF">IPERF</option>
+                <option value="PTM">PTM</option>
+                <option value="RECEBIMENTO">RECEBIMENTO</option>
+                <option value="MPT">MPT</option>
+            </select>
+
+            <div class="buttons">
+                <button type="submit">Enviar Nota</button>
+            </div>
+        </form>
+
+        <div class="buttons">
+            <button onclick="enviarRapido('Empilhadeira')">Empilhadeira</button>
+            <button onclick="enviarRapido('Carro')">Carro</button>
+        </div>
+
+        <!-- Mensagem -->
+        <p id="msg">Chamado lançado com sucesso ✅</p>
+    </div>
+
+    <!-- 🔹 Formulário de aviso geral (agora dentro do container e centralizado) -->
+    <div id="formAviso" style="display:none;">
+        <h2>Aviso Geral</h2>
+        <textarea id="mensagemGeral" placeholder="Digite o aviso para todos..." rows="4"></textarea>
+        <div class="buttons">
+            <button onclick="enviarAviso()">Enviar Aviso</button>
+        </div>
+    </div>
+
+    <div class="export-link">
+        <a href="{{ url_for('exportar') }}">Exportar</a>
+    </div>
+</div>
+
+
+</div>
+
+<script>
+const setorEntrada = document.getElementById("setorEntrada");
+const setorSaida = document.getElementById("setorSaida");
+const deposito = document.getElementById("deposito");
+const btnVoltar = document.getElementById("btnVoltar");
+const formNormal = document.getElementById("formNormal");
+const formAviso = document.getElementById("formAviso");
+
+// Alterna entre form normal e aviso geral
+deposito.addEventListener("change", () => {
+    if (deposito.value === "todos") {
+        formNormal.style.display = "none";
+        formAviso.style.display = "block";
+        btnVoltar.style.display = "inline-block";
+    } else {
+        voltarTelaNormal();
+    }
+});
+
+function voltarTelaNormal() {
+    formNormal.style.display = "block";
+    formAviso.style.display = "none";
+    btnVoltar.style.display = "none";
+}
+
+// Entrada desabilita Saída
+setorEntrada.addEventListener("change", () => {
+    setorSaida.disabled = setorEntrada.value !== "";
+});
+
+// Saída desabilita Entrada
+setorSaida.addEventListener("change", () => {
+    setorEntrada.disabled = setorSaida.value !== "";
+});
+
+async function enviarChamado(event) {
+    event.preventDefault();
+
+    if(!deposito.value){
+        alert("Selecione um depósito!");
+        return;
+    }
+
+    const setorEntradaVal = setorEntrada.value;
+    const setorSaidaVal = setorSaida.value;
+
+    let nome, setor;
+    if (setorEntradaVal) {
+        nome = "Entrada";
+        setor = setorEntradaVal;
+    } else if (setorSaidaVal) {
+        nome = "Saída";
+        setor = setorSaidaVal;
+    } else {
+        alert("Selecione um setor de Entrada ou Saída!");
+        return;
+    }
+
+    await enviarParaServidor(nome, deposito.value, setor);
+}
+
+async function enviarRapido(tipo) {
+    if (!deposito.value) {
+        alert("Selecione um depósito!");
+        return;
+    }
+    await enviarParaServidor(tipo, deposito.value, "");
+}
+
+async function enviarParaServidor(nome, deposito, setor) {
+    try {
+        const dados = { nome, local: deposito, setor };
+        const res = await fetch("/nova", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(dados)
+        });
+        const json = await res.json();
+        if(!json.success){
+            alert("❌ Erro ao enviar chamado!");
+            return;
+        }
+
+        const msg = document.getElementById("msg");
+        msg.style.display = "block";
+        msg.textContent = `Chamado de ${nome}${setor ? " - " + setor : ""} no ${deposito} enviado! ✅`;
+
+        document.getElementById("notaForm").reset();
+        setorEntrada.disabled = false;
+        setorSaida.disabled = false;
+
+        setTimeout(() => { msg.style.display = "none"; }, 3000);
+    } catch (e) {
+        console.error(e);
+        alert("❌ Erro ao enviar chamado!");
+    }
+}
+
+async function enviarAviso() {
+    const msgGeral = document.getElementById("mensagemGeral").value;
+    if (!msgGeral.trim()) {
+        alert("Digite uma mensagem antes de enviar!");
+        return;
+    }
+
+    // Corrigido: agora envia corretamente o campo "mensagem"
+    await fetch("/nova", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome: "Aviso Geral", local: "todos", mensagem: msgGeral })
+    });
+
+    const msg = document.getElementById("msg");
+    msg.style.display = "block";
+    msg.textContent = `Aviso geral enviado para todos os depósitos! ✅`;
+
+    document.getElementById("mensagemGeral").value = "";
+
+    setTimeout(() => { msg.style.display = "none"; }, 3000);
+}
+</script>
+
+
+</body>
+</html>
