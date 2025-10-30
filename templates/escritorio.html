@@ -5,147 +5,53 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lançar Nota</title>
 <style>
-body {
-    font-family: Arial, sans-serif;
-    background-color: #1b4d1b;
-    color: #FFCC00;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    margin: 0;
-}
-
-.export-link {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-}
-
-.export-link a {
-    font-size: 12px;
-    text-decoration: none;
-    color: #FFCC00; /* cor azul padrão de link */
-    cursor: pointer;
-}
-
-.export-link a:hover {
-    text-decoration: underline;
-}
-
-.container {
-    background-color: rgba(0, 0, 0, 0.3);
-    padding: 30px 40px;
-    border-radius: 12px;
-    text-align: center;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-    width: 340px;
-}
-
-h1 {
-    margin-bottom: 25px;
-    font-size: 2em;
-    color: #FFCC00;
-}
-
-label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-    font-size: 1.1em;
-    text-align: left;
-}
-
-select {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 20px;
-    border-radius: 6px;
-    border: none;
-    font-size: 1em;
-}
-
-.buttons {
-    display: flex;
-    justify-content: center;
-    margin-top: 15px;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-button {
-    padding: 12px 20px;
-    font-size: 1.1em;
-    background-color: #FFCC00;
-    color: #004620;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: background 0.3s;
-}
-
-button:hover {
-    background-color: #FFD633;
-}
-
-#msg {
-    margin-top: 15px;
-    font-weight: bold;
-    color: lightgreen;
-    display: none;
-}
-
-#btnVoltar {
-    display: none;
-    background: none;
-    border: none;
-    font-size: 1.5em;
-    color: #FFCC00;
-    cursor: pointer;
-    margin-bottom: 15px;
-}
-
-    #formAviso {
-    display: none;
-    text-align: center;
-}
-
-#formAviso h2 {
-    margin-bottom: 15px;
-    color: #FFCC00;
-}
-
-#formAviso textarea {
-    width: 100%;
-    padding: 10px;
-    border-radius: 8px;
-    border: none;
-    resize: none;
-    font-size: 1em;
-    box-sizing: border-box;
-    background-color: rgba(255, 255, 255, 0.9);
-    color: #004620;
-    margin-bottom: 15px;
-}
-
-
-
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #1b4d1b;
+        color: #FFCC00;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+    }
+    .container {
+        background-color: rgba(0, 0, 0, 0.3);
+        padding: 30px 40px;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        width: 340px;
+    }
+    h1 { margin-bottom: 25px; font-size: 2em; color: #FFCC00; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 1.1em; text-align: left; }
+    select {
+        width: 100%; padding: 10px; margin-bottom: 20px;
+        border-radius: 6px; border: none; font-size: 1em;
+    }
+    .buttons { display: flex; justify-content: center; margin-top: 15px; gap: 10px; flex-wrap: wrap; }
+    button {
+        padding: 12px 20px; font-size: 1.1em; background-color: #FFCC00;
+        color: #004620; border: none; border-radius: 8px; cursor: pointer;
+        font-weight: bold; transition: background 0.3s;
+    }
+    button:hover { background-color: #FFD633; }
+    #msg { margin-top: 15px; font-weight: bold; color: lightgreen; display: none; }
+    #btnVoltar {
+        display:none; background:none; border:none; font-size:1.5em;
+        color:#FFCC00; cursor:pointer; margin-bottom:15px;
+    }
 </style>
 </head>
 <body>
 
-
-
-
-
 <div class="container">
     <h1>Lançar Nota</h1>
 
-    <!-- Botão de Voltar -->
+    <!-- 🔹 Botão de Voltar -->
     <button id="btnVoltar" onclick="voltarTelaNormal()">⬅ Voltar</button>
 
-    <!-- Parte normal -->
+    <!-- 🔹 Parte normal -->
     <div id="formNormal">
         <form id="notaForm" onsubmit="enviarChamado(event)">
             <label for="deposito">Depósito:</label>
@@ -195,26 +101,18 @@ button:hover {
             <button onclick="enviarRapido('Empilhadeira')">Empilhadeira</button>
             <button onclick="enviarRapido('Carro')">Carro</button>
         </div>
-
-        <!-- Mensagem -->
-        <p id="msg">Chamado lançado com sucesso ✅</p>
     </div>
 
-    <!-- 🔹 Formulário de aviso geral (agora dentro do container e centralizado) -->
+    <!-- 🔹 Formulário de aviso geral -->
     <div id="formAviso" style="display:none;">
         <h2>Aviso Geral</h2>
-        <textarea id="mensagemGeral" placeholder="Digite o aviso para todos..." rows="4"></textarea>
+        <textarea id="mensagemGeral" placeholder="Digite o aviso para todos..." rows="3" style="width:100%"></textarea>
         <div class="buttons">
             <button onclick="enviarAviso()">Enviar Aviso</button>
         </div>
     </div>
 
-    <div class="export-link">
-        <a href="{{ url_for('exportar') }}">Exportar</a>
-    </div>
-</div>
-
-
+    <p id="msg">Chamado lançado com sucesso ✅</p>
 </div>
 
 <script>
@@ -341,8 +239,4 @@ async function enviarAviso() {
 
 
 </body>
-<<<<<<< HEAD
 </html>
-=======
-</html>
->>>>>>> 83c2ffaf7e50488069997c17824af0666d037c87
