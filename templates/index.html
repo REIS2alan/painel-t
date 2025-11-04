@@ -153,6 +153,21 @@ font-weight:bold;
 
 .saida { color:#FF0000; font-weight:bold; }
 
+
+/* 🔥 Destaque visual para emergências */
+.emergencia {
+  background-color: #8b0000 !important;  /* fundo vermelho escuro */
+  color: #fff !important;
+  animation: piscar 1s infinite alternate;
+  font-weight: bold;
+}
+
+@keyframes piscar {
+  0% { background-color: #8b0000; }
+  100% { background-color: #ff0000; }
+}
+
+
 </style>
 </head>
 <body>
@@ -188,7 +203,8 @@ font-weight:bold;
             <tbody>
                 {% for n in notificacoes %}
                     {% if n.local != "todos" and n.nome != "Aviso Geral" %}
-                    <tr class="{% if n.visto %}visto{% endif %}">
+                    <tr class="{% if n.visto %}visto{% endif %} {% if n.emergencia %}emergencia{% endif %}">
+
                         <td class="{% if n.nome=='Entrada' %}entrada{% elif n.nome=='Saída' %}saida{% endif %}">
                             {{ n.nome }}{% if n.setor %} - {{ n.setor }}{% endif %}
                         </td>
