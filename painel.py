@@ -1,4 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from io import BytesIO
+
+import pandas as pd
+from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file
 from datetime import datetime
 import os
 import pytz
@@ -7,6 +10,9 @@ import pytz
 fuso = pytz.timezone('America/Sao_Paulo')
 
 app = Flask(__name__)
+
+
+
 
 # Lista de notificações em memória
 notificacoes = []
@@ -80,6 +86,7 @@ def nova_notificacao():
     local = dados.get("local")
     setor = dados.get("setor", "")
     mensagem = dados.get("mensagem", "")
+    emergencia = dados.get("emergencia", False)
 
     if not nome and not mensagem:
         return jsonify({"success": False, "error": "Faltando dados"}), 400
@@ -92,6 +99,7 @@ def nova_notificacao():
         "local": local if local else "todos",
         "setor": setor,
         "mensagem": mensagem,
+        "emergencia": emergencia,
         "visto": False,
         "visto_depositos": [],
         "status": None,
@@ -101,6 +109,8 @@ def nova_notificacao():
         "status_horarios": {},
         "deposito_aceitou": None
     })
+
+
     return jsonify({"success": True})
 
 
@@ -172,11 +182,18 @@ def marcar_visto_mensagem(id, deposito):
 def notificacoes_ativas(deposito):
     todas = []
     for n in notificacoes:
-        if not n.get("visto", False):
-            if n["nome"].lower() in ["carro", "empilhadeira"]:
-                todas.append(n)
-            elif n["local"] == deposito or n["local"] == "todos":
-                todas.append(n)
+        nome_lower = n["nome"].lower()
+
+        # Se é carro ou empilhadeira, sempre envia
+        if nome_lower in ["carro", "empilhadeira"]:
+            todas.append(n)
+        # Se é aviso geral ou do escritório, envia se este depósito ainda não viu
+        elif nome_lower in ["aviso geral", "aviso"] and deposito not in n.get("visto_depositos", []):
+            todas.append(n)
+        # Se é notificação normal do depósito, envia se não foi vista
+        elif n["local"] == deposito or n["local"] == "todos":
+            todas.append(n)
+
     return jsonify({"notificacoes": todas})
 
 
@@ -191,8 +208,30 @@ def atualizar_empilhadeira(nome, disponivel):
             return jsonify(success=True, setor=m.get("setor", ""))
     return jsonify(success=False)
 
+@app.route("/exportar_notificacoes")
+def exportar_notificacoes():
+    if not notificacoes:
+        return jsonify({"success": False, "error": "Nenhuma notificação disponível para exportar"}), 400
+
+    # Cria um DataFrame com as notificações
+    df = pd.DataFrame(notificacoes)
+
+    # Cria o arquivo Excel em memória
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Notificações")
+
+    output.seek(0)
+
+    # Envia o arquivo para download
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=f"notificacoes_{datetime.now(fuso).strftime('%d-%m-%Y_%Hh%Mm')}.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=True, host="0.0.0.0", port=port)
-22
