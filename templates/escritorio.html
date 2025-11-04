@@ -45,13 +45,16 @@
 </head>
 <body>
 
+<a href="/exportar_notificacoes"
+   style="position: absolute; top: 20px; right: 30px; color: #2eb872; font-weight: bold; text-decoration: none;">
+  Exportar
+</a>
+
 <div class="container">
     <h1>Lançar Nota</h1>
 
-    <!-- 🔹 Botão de Voltar -->
     <button id="btnVoltar" onclick="voltarTelaNormal()">⬅ Voltar</button>
 
-    <!-- 🔹 Parte normal -->
     <div id="formNormal">
         <form id="notaForm" onsubmit="enviarChamado(event)">
             <label for="deposito">Depósito:</label>
@@ -92,6 +95,11 @@
                 <option value="MPT">MPT</option>
             </select>
 
+            <label style="display: flex; align-items: center; gap: 6px; margin-top: 10px; color: #fff;">
+                <input type="checkbox" id="emergencia" style="transform: scale(1.2);" />
+                Emergência
+            </label>
+
             <div class="buttons">
                 <button type="submit">Enviar Nota</button>
             </div>
@@ -103,7 +111,6 @@
         </div>
     </div>
 
-    <!-- 🔹 Formulário de aviso geral -->
     <div id="formAviso" style="display:none;">
         <h2>Aviso Geral</h2>
         <textarea id="mensagemGeral" placeholder="Digite o aviso para todos..." rows="3" style="width:100%"></textarea>
@@ -123,7 +130,6 @@ const btnVoltar = document.getElementById("btnVoltar");
 const formNormal = document.getElementById("formNormal");
 const formAviso = document.getElementById("formAviso");
 
-// Alterna entre form normal e aviso geral
 deposito.addEventListener("change", () => {
     if (deposito.value === "todos") {
         formNormal.style.display = "none";
@@ -140,23 +146,17 @@ function voltarTelaNormal() {
     btnVoltar.style.display = "none";
 }
 
-// Entrada desabilita Saída
 setorEntrada.addEventListener("change", () => {
     setorSaida.disabled = setorEntrada.value !== "";
 });
 
-// Saída desabilita Entrada
 setorSaida.addEventListener("change", () => {
     setorEntrada.disabled = setorSaida.value !== "";
 });
 
 async function enviarChamado(event) {
     event.preventDefault();
-
-    if(!deposito.value){
-        alert("Selecione um depósito!");
-        return;
-    }
+    if (!deposito.value) return alert("Selecione um depósito!");
 
     const setorEntradaVal = setorEntrada.value;
     const setorSaidaVal = setorSaida.value;
@@ -169,34 +169,35 @@ async function enviarChamado(event) {
         nome = "Saída";
         setor = setorSaidaVal;
     } else {
-        alert("Selecione um setor de Entrada ou Saída!");
-        return;
+        return alert("Selecione um setor de Entrada ou Saída!");
     }
 
     await enviarParaServidor(nome, deposito.value, setor);
 }
 
 async function enviarRapido(tipo) {
-    if (!deposito.value) {
-        alert("Selecione um depósito!");
-        return;
-    }
+    if (!deposito.value) return alert("Selecione um depósito!");
     await enviarParaServidor(tipo, deposito.value, "");
 }
 
 async function enviarParaServidor(nome, deposito, setor) {
     try {
-        const dados = { nome, local: deposito, setor };
+        const dados = {
+            nome: nome,
+            local: deposito,
+            setor: setor,
+            mensagem: "",
+            emergencia: document.getElementById("emergencia").checked
+        };
+
         const res = await fetch("/nova", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(dados)
         });
+
         const json = await res.json();
-        if(!json.success){
-            alert("❌ Erro ao enviar chamado!");
-            return;
-        }
+        if (!json.success) throw new Error();
 
         const msg = document.getElementById("msg");
         msg.style.display = "block";
@@ -206,7 +207,7 @@ async function enviarParaServidor(nome, deposito, setor) {
         setorEntrada.disabled = false;
         setorSaida.disabled = false;
 
-        setTimeout(() => { msg.style.display = "none"; }, 3000);
+        setTimeout(() => msg.style.display = "none", 3000);
     } catch (e) {
         console.error(e);
         alert("❌ Erro ao enviar chamado!");
@@ -214,13 +215,9 @@ async function enviarParaServidor(nome, deposito, setor) {
 }
 
 async function enviarAviso() {
-    const msgGeral = document.getElementById("mensagemGeral").value;
-    if (!msgGeral.trim()) {
-        alert("Digite uma mensagem antes de enviar!");
-        return;
-    }
+    const msgGeral = document.getElementById("mensagemGeral").value.trim();
+    if (!msgGeral) return alert("Digite uma mensagem antes de enviar!");
 
-    // Corrigido: agora envia corretamente o campo "mensagem"
     await fetch("/nova", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -229,14 +226,12 @@ async function enviarAviso() {
 
     const msg = document.getElementById("msg");
     msg.style.display = "block";
-    msg.textContent = `Aviso geral enviado para todos os depósitos! ✅`;
-
+    msg.textContent = "Aviso geral enviado para todos os depósitos! ✅";
     document.getElementById("mensagemGeral").value = "";
 
-    setTimeout(() => { msg.style.display = "none"; }, 3000);
+    setTimeout(() => msg.style.display = "none", 3000);
 }
 </script>
-
 
 </body>
 </html>
